@@ -17,7 +17,7 @@
  * NOTE: The name of this library is provisional and subject to change.
  *       It may not reflect the final name of the library.
  * 
- * For more information, visit: {URL or GitHub Link}
+ * For more information, visit: https://github.com/unrays/Typelist
  *
  * Author: Félix-Olivier Dumas
  * Version: 0.4.0
