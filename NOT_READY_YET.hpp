@@ -20,7 +20,7 @@
  * For more information, visit: https://github.com/unrays/Typelist
  *
  * Author: Félix-Olivier Dumas
- * Version: 0.5.0
+ * Version: 0.6.0
  * Last Updated: January 12, 2026
  *********************************************************************/
 
@@ -129,53 +129,28 @@ using at_t = typename at<N, List>::type;
 
 /**************************************/
 
+//details
 template<typename>
-struct pop_front {};
+struct pop_front_impl {};
 
-template<typename Head, typename... Tail>
-struct pop_front<typelist<Head, Tail...>> {
-    using type = typelist<Tail...>;
+template<template<typename...> class L, typename Head, typename... Tail>
+struct pop_front_impl<L<Head, Tail...>> {
+    using type = L<Tail...>;
 };
 
-template<>
-struct pop_front<typelist<>> {
-    using type = typelist<>;
+template<template<typename...> class L>
+struct pop_front_impl<L<>> {
+    using type = L<>;
 };
 
-template<typename List>
-using pop_front_t = typename pop_front<List>::type;
-
-/**************************************/
-
-template<typename... Ts>
-struct pop_back; //reverse + pop_front + reverse
-
-template<typename T>
-struct pop_back<typelist<T>> {
-    using type = typelist<>;
+//public
+template<typename L>
+struct pop_front {
+    using type = typename pop_front_impl<L>::type;
 };
 
-template<typename First, typename... Rest>
-struct pop_back<typelist<First, Rest...>> {
-private:
-    template<typename... Ts>
-    using TailPop = pop_back<typelist<Ts...>>::type;
-
-private:
-    template<typename, typename>
-    struct Prepend;
-
-    template<typename T1, typename... Ts>
-    struct Prepend<T1, typelist<Ts...>> {
-        using type = typelist<T1, Ts...>;
-    };
-
-public:
-    using type = Prepend<First, TailPop<Rest...>>::type;
-};
-
-template<typename List>
-using pop_back_t = typename pop_back<List>::type;
+template<typename L>
+using pop_front_t = typename pop_front<L>::type;
 
 /**************************************/
 
@@ -196,7 +171,7 @@ template<typename>
 struct back;
 
 template<typename First, typename... Rest>
-struct back<typelist<First, Rest...>> {
+struct back<typelist<First, Rest...>> { //reverse + first
     using type = at<
         typelist_size_v<typelist<First, Rest...>> - 1,
         typelist<First, Rest...>
@@ -208,39 +183,43 @@ using back_t = typename back<List>::type;
 
 /**************************************/
 
+//details
 template<typename, typename>
-struct push_back;
+struct push_back_impl;
 
-template<typename T>
-struct push_back<T, typelist<>> {
-    using type = typelist<T>;
+template<typename T, template<typename...> class L, typename... Ts>
+struct push_back_impl<T, L<Ts...>> {
+    using type = typelist<Ts..., T>;
 };
 
-template<typename T, typename First, typename... Rest>
-struct push_back<T, typelist<First, Rest...>> {
-    using type = typelist<First, Rest..., T>;
+//public
+template<typename T, typename L>
+struct push_back {
+    using type = typename push_back_impl<T, L>::type;
 };
 
-template<typename T, typename List>
-using push_back_t = typename push_back<T, List>::type;
+template<typename T, typename L>
+using push_back_t = typename push_back<T, L>::type;
 
 /**************************************/
 
+//details
 template<typename, typename>
-struct push_front;
+struct push_front_impl;
 
-template<typename T>
-struct push_front<T, typelist<>> {
-    using type = typelist<T>;
+template<typename T, template<typename...> class L, typename... Ts>
+struct push_front_impl<T, L<Ts...>> {
+    using type = L<T, Ts...>;
 };
 
-template<typename T, typename First, typename... Rest> 
-struct push_front<T, typelist<First, Rest...>> {
-    using type = typelist<T, First, Rest...>;
+//public
+template<typename T, typename L>
+struct push_front {
+    using type = typename push_front_impl<T, L>::type;
 };
 
-template<typename T, typename List>
-using push_front_t = typename push_front<T, List>::type;
+template<typename T, typename L>
+using push_front_t = typename push_front<T, L>::type;
 
 /**************************************/
 
@@ -248,29 +227,19 @@ using push_front_t = typename push_front<T, List>::type;
 template<typename, typename>
 struct concat_impl;
 
-template<>
-struct concat_impl<typelist<>, typelist<>> {
-    using type = typelist<>;
-};
-
-template<typename T1, typename... Ts1>
-struct concat_impl<typelist<T1, Ts1...>, typelist<>> {
-    using type = typelist<T1, Ts1...>;
-};
-
-template<typename T2, typename... Ts2>
-struct concat_impl<typelist<>, typelist<T2, Ts2...>> {
-    using type = typelist<T2, Ts2...>;
-};
-
-template<typename T1, typename... Ts1, typename T2, typename... Ts2>
-struct concat_impl<typelist<T1, Ts1...>, typelist<T2, Ts2...>> {
-    using type = typelist<T1, Ts1..., T2, Ts2...>;
+template<template<typename> class L, typename... Ts1, typename... Ts2>
+struct concat_impl<L<Ts1...>, L<Ts2...>> {
+    using type = L<Ts1..., Ts2...>;
 };
 
 //public
 template<typename L1, typename L2>
-using concat_t = typename concat_impl<L1, L2>::type;
+struct concat {
+    using type = typename concat_impl<L1, L2>::type;
+};
+
+template<typename L1, typename L2>
+using concat_t = typename concat<L1, L2>::type;
 
 /**************************************/
 
@@ -339,6 +308,27 @@ using reverse_t = typename reverse<List>::type;
 
 /**************************************/
 
+//details
+template<typename... Ts>
+struct pop_back_impl;
+
+template<template<typename...> class L, typename... Ts>
+struct pop_back_impl<L<Ts...>> {
+    using type = reverse_t<pop_front_t<reverse_t<L<Ts...>>>>;
+};
+
+//public
+template<typename L> 
+struct pop_back {
+    using type = typename pop_back_impl<L>::type;
+};
+
+template<typename L>
+using pop_back_t = typename pop_back<L>::type;
+
+/**************************************/
+
+// REMPLACER TYPELIST PAR L
 
 int main() {
     using list = typelist<int, float, double, bool>;
@@ -359,11 +349,14 @@ int main() {
 
     std::cout << typeid(make_index_sequence<0>).name() << "\n";
 
-    using new_list_5 = reverse<new_list_4>;
+    using new_list_5 = reverse_t<new_list_4>;
 
+    using new_list_6 = push_front_t<long, new_list_5>;
+
+    using new_list_7 = pop_back_impl<new_list_6>::type;
 
     std::cout << typeid(new_list_4).name() << "\n";
-    std::cout << typeid(new_list_5).name() << "\n";
+    std::cout << typeid(new_list_7).name() << "\n";
 }
 
 #endif // EXOTIC_TYPELIST_H
