@@ -20,8 +20,8 @@
  * For more information, visit: https://github.com/unrays/Typelist
  *
  * Author: Félix-Olivier Dumas
- * Version: 0.4.0
- * Last Updated: January 11, 2026
+ * Version: 0.5.0
+ * Last Updated: January 12, 2026
  *********************************************************************/
 
 #ifndef EXOTIC_TYPELIST_H
@@ -51,14 +51,14 @@ template<typename List>
 inline constexpr std::size_t typelist_size_v = typelist_size<List>::value;
 
 /**************************************/
-//public
 
+//public
 template<std::size_t... Is>
 struct index_sequence {};
 
 /**************************************/
-//details
 
+//details
 template<std::size_t...>
 struct make_index_sequence_impl;
 
@@ -71,9 +71,7 @@ struct make_index_sequence_impl<0, Is...> {
     using type = index_sequence<Is...>;
 };
 
-/**************************************/
 //public
-
 template<std::size_t N>
 using make_index_sequence = typename make_index_sequence_impl<N>::type;
 
@@ -246,31 +244,33 @@ using push_front_t = typename push_front<T, List>::type;
 
 /**************************************/
 
+//details
 template<typename, typename>
-struct concat;
+struct concat_impl;
 
 template<>
-struct concat<typelist<>, typelist<>> {
+struct concat_impl<typelist<>, typelist<>> {
     using type = typelist<>;
 };
 
 template<typename T1, typename... Ts1>
-struct concat<typelist<T1, Ts1...>, typelist<>> {
+struct concat_impl<typelist<T1, Ts1...>, typelist<>> {
     using type = typelist<T1, Ts1...>;
 };
 
 template<typename T2, typename... Ts2>
-struct concat<typelist<>, typelist<T2, Ts2...>> {
+struct concat_impl<typelist<>, typelist<T2, Ts2...>> {
     using type = typelist<T2, Ts2...>;
 };
 
 template<typename T1, typename... Ts1, typename T2, typename... Ts2>
-struct concat<typelist<T1, Ts1...>, typelist<T2, Ts2...>> {
+struct concat_impl<typelist<T1, Ts1...>, typelist<T2, Ts2...>> {
     using type = typelist<T1, Ts1..., T2, Ts2...>;
 };
 
+//public
 template<typename L1, typename L2>
-using concat_t = typename concat<L1, L2>::type;
+using concat_t = typename concat_impl<L1, L2>::type;
 
 /**************************************/
 
@@ -296,23 +296,46 @@ struct replace<0, NewType, typelist<First, Rest...>> {
 
 /**************************************/
 
-template<template<typename> class F, typename List>
-struct transform;
+//details
+template<template<typename> class, typename>
+struct transform_impl;
 
-// À TERMINER...
+template<template<typename> class F, template<typename> class L, typename... Ts>
+struct transform_impl<F, L<Ts...>> {
+    using type = typelist<F<Ts>...>;
+};
+
+//public
+template<template<typename> class F, typename L>
+struct transform {
+    using type = typename transform_impl<F, L>::type;
+};
+
+template<template<typename> class F, typename L>
+using transform_t = typename transform<F, L>::type;
 
 /**************************************/
 
-template<typename>
-struct reverse;
+//details
+template<typename, typename>
+struct reverse_impl;
 
-template<typename T1, typename... Ts> 
-struct reverse<typelist<T1, Ts...>> {
-
-
+template<template<typename> class L, typename... Ts, std::size_t... Is>
+struct reverse_impl<L<Ts...>, index_sequence<Is...>> {
+    using type = typelist<at_t<sizeof...(Ts) - 1 - Is, typelist<Ts...>>...>;
 };
 
-// À TERMINER...
+//public
+template<typename List>
+struct reverse {
+    using type = typename reverse_impl<
+        List,
+        make_index_sequence<typelist_size_v<List>>
+    >::type;
+};
+
+template<typename List>
+using reverse_t = typename reverse<List>::type;
 
 /**************************************/
 
@@ -336,7 +359,11 @@ int main() {
 
     std::cout << typeid(make_index_sequence<0>).name() << "\n";
 
+    using new_list_5 = reverse<new_list_4>;
+
+
     std::cout << typeid(new_list_4).name() << "\n";
+    std::cout << typeid(new_list_5).name() << "\n";
 }
 
 #endif // EXOTIC_TYPELIST_H
