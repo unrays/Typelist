@@ -20,7 +20,7 @@
  * For more information, visit: https://github.com/unrays/Typelist
  *
  * Author: Félix-Olivier Dumas
- * Version: 0.6.0
+ * Version: 0.7.0
  * Last Updated: January 12, 2026
  *********************************************************************/
 
@@ -32,6 +32,7 @@
 
 /**************************************/
 
+//public
 template<typename... Ts>
 struct typelist {
     using types = typelist<Ts...>;
@@ -39,16 +40,23 @@ struct typelist {
 
 /**************************************/
 
+//details
 template<typename>
-struct typelist_size;
+struct size_impl;
 
-template<typename... Ts>
-struct typelist_size<typelist<Ts...>> {
+template<template<typename...> class L, typename... Ts>
+struct size_impl<L<Ts...>> {
     static inline constexpr std::size_t value = sizeof...(Ts);
 };
 
-template<typename List>
-inline constexpr std::size_t typelist_size_v = typelist_size<List>::value;
+//public
+template<typename L>
+struct size {
+    static inline constexpr std::size_t value = size_impl<L>::value;
+};
+
+template<typename L>
+inline constexpr std::size_t size_v = size<L>::value;
 
 /**************************************/
 
@@ -77,40 +85,28 @@ using make_index_sequence = typename make_index_sequence_impl<N>::type;
 
 /**************************************/
 
-template<typename> //un peu bad, typelist_size_v le fait deja
-struct make_index_sequence_from_typelist;
-
-template<typename... Ts>
-struct make_index_sequence_from_typelist<typelist<Ts...>> {
-    using type = make_index_sequence<sizeof...(Ts)>;
-};
-
-template<typename List>
-using make_index_sequence_from_typelist_t =
-    typename make_index_sequence_from_typelist<List>::type;
-
-/**************************************/
-
+//details
 template<typename>
-struct empty;
+struct empty_impl;
 
-template<typename... Ts>
-struct empty<typelist<Ts...>> {
-    static inline constexpr bool value = false;
+template<template<typename...> class L, typename... Ts>
+struct empty_impl<L<Ts...>> {
+    static inline constexpr bool value = sizeof...(Ts) == 0;
 };
 
-template<>
-struct empty<typelist<>> {
-    static inline constexpr bool value = true;
+//public
+template<typename L>
+struct empty {
+    static inline constexpr bool value = empty_impl<L>::value;
 };
 
-template<typename List>
-inline constexpr bool empty_v = empty<List>::value;
+template<typename L>
+inline constexpr bool empty_v = empty<L>::value;
 
 /**************************************/
 
 template<std::size_t N, typename List,
-    typename Enable = std::enable_if_t<(N < typelist_size_v<List>)>
+    typename Enable = std::enable_if_t<(N < size_v<List>)>
 >
 struct at;
 
@@ -154,32 +150,46 @@ using pop_front_t = typename pop_front<L>::type;
 
 /**************************************/
 
+//details
 template<typename>
-struct front;
+struct front_impl;
 
-template<typename First, typename... Rest>
-struct front<typelist<First, Rest...>> {
-    using type = First;
+template<template<typename...> class L, typename T, typename... Ts>
+struct front_impl<L<T, Ts...>> {
+    using type = T;
 };
 
-template<typename List>
-using front_t = typename front<List>::type;
+//public
+template<typename L>
+struct front {
+    using type = typename front_impl<L>::type;
+};
+
+template<typename L>
+using front_t = typename front<L>::type;
 
 /**************************************/
 
+//details
 template<typename>
-struct back;
+struct back_impl;
 
-template<typename First, typename... Rest>
-struct back<typelist<First, Rest...>> { //reverse + first
-    using type = at<
-        typelist_size_v<typelist<First, Rest...>> - 1,
-        typelist<First, Rest...>
+template<template<typename...> class L, typename... Ts>
+struct back_impl<L<Ts...>> {
+    using type = at_t<
+        size_v<L<Ts...>> -1,
+        L<Ts...>
     >;
 };
 
-template<typename List>
-using back_t = typename back<List>::type;
+//public
+template<typename L>
+struct back {
+    using type = typename back_impl<L>::type;
+};
+
+template<typename L>
+using back_t = typename back<L>::type;
 
 /**************************************/
 
@@ -299,7 +309,7 @@ template<typename List>
 struct reverse {
     using type = typename reverse_impl<
         List,
-        make_index_sequence<typelist_size_v<List>>
+        make_index_sequence<size_v<List>>
     >::type;
 };
 
