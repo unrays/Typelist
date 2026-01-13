@@ -27,7 +27,8 @@
 #ifndef EXOTIC_TYPELIST_H
 #define EXOTIC_TYPELIST_H
 
-#include <iostream>
+#define EXOTIC_TYPELIST_DEBUG
+
 #include <cstddef>
 
 /**************************************/
@@ -265,9 +266,6 @@ struct replace<N, NewType, typelist<First, Rest...>> { //faire avec : herite de 
 
 template<typename NewType, typename First, typename... Rest>
 struct replace<0, NewType, typelist<First, Rest...>> {
-    replace() {
-        std::cout << "t\n";
-    }
     using type = typelist<NewType, Rest...>;
 };
 
@@ -340,6 +338,10 @@ using pop_back_t = typename pop_back<L>::type;
 
 // REMPLACER TYPELIST PAR L
 
+// NON-NÉGOCIABLE, DELETER #include <iostream>
+
+#ifdef EXOTIC_TYPELIST_DEBUG
+#include <iostream>
 int main() {
     using list = typelist<int, float, double, bool>;
 
@@ -368,5 +370,6 @@ int main() {
     std::cout << typeid(new_list_4).name() << "\n";
     std::cout << typeid(new_list_7).name() << "\n";
 }
+#endif
 
 #endif // EXOTIC_TYPELIST_H
