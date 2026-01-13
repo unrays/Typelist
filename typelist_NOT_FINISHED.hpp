@@ -20,8 +20,8 @@
  * For more information, visit: https://github.com/unrays/Typelist
  *
  * Author: Félix-Olivier Dumas
- * Version: 0.7.0
- * Last Updated: January 12, 2026
+ * Version: 0.8.0
+ * Last Updated: January 13, 2026
  *********************************************************************/
 
 #ifndef EXOTIC_TYPELIST_H
@@ -61,13 +61,24 @@ inline constexpr std::size_t size_v = size<L>::value;
 
 /**************************************/
 
-//public
+//public (external)
+struct true_type {
+    static inline constexpr bool value = true;
+};
+
+struct false_type {
+    static inline constexpr bool value = false;
+};
+
+/**************************************/
+
+//public (external)
 template<std::size_t... Is>
 struct index_sequence {};
 
 /**************************************/
 
-//details
+//details (external)
 template<std::size_t...>
 struct make_index_sequence_impl;
 
@@ -80,9 +91,57 @@ struct make_index_sequence_impl<0, Is...> {
     using type = index_sequence<Is...>;
 };
 
-//public
+//public (external)
 template<std::size_t N>
 using make_index_sequence = typename make_index_sequence_impl<N>::type;
+
+/**************************************/
+
+//details (external)
+template<typename, typename>
+struct is_same_impl;
+
+template<typename T, typename U>
+struct is_same_impl : false_type {};
+
+template<typename T>
+struct is_same_impl<T, T> : true_type {};
+
+//public (external)
+template<typename T, typename U>
+struct is_same {
+    using type = is_same_impl<T, U>;
+};
+
+template<typename T, typename U>
+inline constexpr bool is_same_v = is_same<T, U>::type::value;
+
+/**************************************/
+
+//details
+template<std::size_t N, typename List,
+    typename Enable = std::enable_if_t<(N < size_v<List>)>
+    >
+struct at_impl;
+
+template<template<typename...> class L, typename T, typename... Ts>
+struct at_impl<0, L<T, Ts...>> {
+    using type = T;
+};
+
+template<std::size_t N, template<typename...> class L, typename T, typename... Ts>
+struct at_impl<N, L<T, Ts...>> {
+    using type = typename at_impl<N - 1, L<Ts...>>::type;
+};
+
+//public
+template<std::size_t N, typename L>
+struct at {
+    using type = typename at_impl<N, L>::type;
+};
+
+template<std::size_t N, typename L>
+using at_t = typename at<N, L>::type;
 
 /**************************************/
 
@@ -106,23 +165,51 @@ inline constexpr bool empty_v = empty<L>::value;
 
 /**************************************/
 
-template<std::size_t N, typename List,
-    typename Enable = std::enable_if_t<(N < size_v<List>)>
->
-struct at;
+//details
+template<typename, typename, typename>
+struct contains_impl;
 
-template<typename First, typename... Rest>
-struct at<0, typelist<First, Rest...>> {
-    using type = First;
+template<typename T, template<typename...> class L, typename... Ts, std::size_t... Is>
+struct contains_impl<T, L<Ts...>, index_sequence<Is...>> {
+    static inline constexpr bool value = (is_same_v<at_t<Is, L<Ts...>>, T> || ...);
 };
 
-template<std::size_t N, typename First, typename... Rest>
-struct at<N, typelist<First, Rest...>> {
-    using type = typename at<N - 1, typelist<Rest...>>::type;
+//public
+template<typename T, typename L>
+struct contains {
+    static inline constexpr bool value =
+        contains_impl<T, L, make_index_sequence<size_v<L>>>::value;
 };
 
-template<std::size_t N, typename List>
-using at_t = typename at<N, List>::type;
+template<typename T, typename L>
+inline constexpr bool contains_v = contains<T, L>::value;
+
+/**************************************/
+
+//details
+template<typename, typename, std::size_t>
+struct index_of_impl;
+
+template<typename T, template<typename...> class L, typename... Ts>
+struct index_of_impl<T, L<Ts...>, 0> {
+    static inline constexpr std::size_t value = ~static_cast<std::size_t>(0);
+};
+
+template<typename T, template<typename...> class L, typename... Ts, std::size_t Index>
+struct index_of_impl<T, L<Ts...>, Index> {
+    static inline constexpr std::size_t value =
+        is_same_v<at_t<Index, L<Ts...>>, T> 
+            ? Index : index_of_impl<T, L<Ts...>, Index - 1>::value;
+};
+
+//public
+template<typename T, typename L>
+struct index_of {
+    static inline constexpr std::size_t value = index_of_impl<T, L, size_v<L> - 1>::value;
+};
+
+template<typename T, typename L>
+inline constexpr std::size_t index_of_v = index_of<T, L>::value;
 
 /**************************************/
 
@@ -130,9 +217,9 @@ using at_t = typename at<N, List>::type;
 template<typename>
 struct pop_front_impl {};
 
-template<template<typename...> class L, typename Head, typename... Tail>
-struct pop_front_impl<L<Head, Tail...>> {
-    using type = L<Tail...>;
+template<template<typename...> class L, typename T, typename... Ts>
+struct pop_front_impl<L<T, Ts...>> {
+    using type = L<Ts...>;
 };
 
 template<template<typename...> class L>
@@ -200,7 +287,7 @@ struct push_back_impl;
 
 template<typename T, template<typename...> class L, typename... Ts>
 struct push_back_impl<T, L<Ts...>> {
-    using type = typelist<Ts..., T>;
+    using type = L<Ts..., T>;
 };
 
 //public
@@ -254,22 +341,40 @@ using concat_t = typename concat<L1, L2>::type;
 
 /**************************************/
 
-template<std::size_t, typename, typename>
-struct replace;
+//details
+template<std::size_t N, typename NewType, typename List, typename Seq,
+    typename Enable = std::enable_if_t<(N < size_v<List>)>
+>
+struct replace_impl;
 
-template<std::size_t N, typename NewType, typename First, typename... Rest>
-struct replace<N, NewType, typelist<First, Rest...>> { //faire avec : herite de using type
-    using type = typename replace<N - 1, NewType, typelist<Rest...>>::type;
-
-        //on itere jusqua ce que le First != newtype, si == new type, on return early
+template<
+    std::size_t N, typename NewType,
+    template<typename...> class L, typename... Ts,
+    std::size_t... Is
+>
+struct replace_impl<N, NewType, L<Ts...>, index_sequence<Is...>> {
+    using type = L<
+        std::conditional_t<
+            Is == N,
+            NewType,
+            at_t<Is, L<Ts...>>
+        >...
+    >;
 };
 
-template<typename NewType, typename First, typename... Rest>
-struct replace<0, NewType, typelist<First, Rest...>> {
-    using type = typelist<NewType, Rest...>;
+//public
+template<std::size_t N, typename NewType, typename L>
+struct replace {
+    using type = typename replace_impl<
+        N,
+        NewType,
+        L,
+        make_index_sequence<size_v<L>>
+    >::type;
 };
 
-// À TERMINER...s
+template<std::size_t N, typename NewType, typename L>
+using replace_t = typename replace<N, NewType, L>::type;
 
 /**************************************/
 
@@ -279,7 +384,7 @@ struct transform_impl;
 
 template<template<typename> class F, template<typename> class L, typename... Ts>
 struct transform_impl<F, L<Ts...>> {
-    using type = typelist<F<Ts>...>;
+    using type = L<F<Ts>...>;
 };
 
 //public
@@ -299,20 +404,20 @@ struct reverse_impl;
 
 template<template<typename> class L, typename... Ts, std::size_t... Is>
 struct reverse_impl<L<Ts...>, index_sequence<Is...>> {
-    using type = typelist<at_t<sizeof...(Ts) - 1 - Is, typelist<Ts...>>...>;
+    using type = L<at_t<sizeof...(Ts) - 1 - Is, L<Ts...>>...>;
 };
 
 //public
-template<typename List>
+template<typename L>
 struct reverse {
     using type = typename reverse_impl<
-        List,
-        make_index_sequence<size_v<List>>
+        L,
+        make_index_sequence<size_v<L>>
     >::type;
 };
 
-template<typename List>
-using reverse_t = typename reverse<List>::type;
+template<typename L>
+using reverse_t = typename reverse<L>::type;
 
 /**************************************/
 
@@ -353,9 +458,9 @@ int main() {
 
     using test = at_t<2, list>;
 
-    using test2 = replace<1, unsigned int, new_list_4>;
+    //using test2 = replace<1, unsigned int, new_list_4>;
 
-    std::cout << typeid(test2::type).name() << "\n";
+    //std::cout << typeid(test2::type).name() << "\n";
 
     std::cout << std::boolalpha << empty_v<list> << "\n";
 
@@ -367,8 +472,14 @@ int main() {
 
     using new_list_7 = pop_back_impl<new_list_6>::type;
 
+    using new_list_8 = replace_t<2, bool, new_list_7>;
+
+    std::cout << std::boolalpha << contains_v<int, new_list_8> << "\n";
+
+    std::cout << index_of_v<int, new_list_8> << "\n";
+
     std::cout << typeid(new_list_4).name() << "\n";
-    std::cout << typeid(new_list_7).name() << "\n";
+    std::cout << typeid(new_list_8).name() << "\n";
 }
 #endif
 
