@@ -193,6 +193,7 @@ struct index_of_impl;
 template<typename T, template<typename...> class L, typename... Ts>
 struct index_of_impl<T, L<Ts...>, 0> {
     static inline constexpr std::size_t value = ~static_cast<std::size_t>(0);
+    //DUDE TU MET UN STATIC_ASSERT OU DE QUOI
 };
 
 template<typename T, template<typename...> class L, typename... Ts, std::size_t Index>
@@ -200,6 +201,9 @@ struct index_of_impl<T, L<Ts...>, Index> {
     static inline constexpr std::size_t value =
         is_same_v<at_t<Index, L<Ts...>>, T> 
             ? Index : index_of_impl<T, L<Ts...>, Index - 1>::value;
+
+    //il parait qu'il faut commencer a 0 -> size_v<liste> pour pogner 
+    //la première occurence, pas commencer du haut vers le bas...
 };
 
 //public
@@ -441,9 +445,19 @@ using pop_back_t = typename pop_back<L>::type;
 
 /**************************************/
 
+
+
+/**************************************/
+
 // REMPLACER TYPELIST PAR L
 
 // NON-NÉGOCIABLE, DELETER #include <iostream>
+
+/*
+    pop_back cassé
+    index_of qui surprend (comportement inverse de la norme)
+    replace qui ne compile pas correctement dans beaucoup de cas
+*/
 
 #ifdef EXOTIC_TYPELIST_DEBUG
 #include <iostream>
