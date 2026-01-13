@@ -445,10 +445,6 @@ using pop_back_t = typename pop_back<L>::type;
 
 /**************************************/
 
-
-
-/**************************************/
-
 // REMPLACER TYPELIST PAR L
 
 // NON-NÉGOCIABLE, DELETER #include <iostream>
