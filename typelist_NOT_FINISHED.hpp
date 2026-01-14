@@ -21,7 +21,7 @@
  *
  * Author: Félix-Olivier Dumas
  * Version: 0.8.0
- * Last Updated: January 13, 2026
+ * Last Updated: January 14, 2026
  *********************************************************************/
 
 #ifndef EXOTIC_TYPELIST_H
@@ -58,6 +58,21 @@ struct size {
 
 template<typename L>
 inline constexpr std::size_t size_v = size<L>::value;
+
+/**************************************/
+
+//public (external)
+template<class>
+struct dependent_false : std::false_type {};
+
+template<class T>
+inline constexpr bool dependent_false_v = dependent_false<T>::value;
+
+/**************************************/
+
+//public (external)
+template<typename>
+struct index_of_of_bounds;
 
 /**************************************/
 
@@ -118,14 +133,24 @@ inline constexpr bool is_same_v = is_same<T, U>::type::value;
 
 /**************************************/
 
+//public (external)
+template<typename T>
+struct is_void : is_same<T, void>::type {};
+
+template<typename T>
+inline constexpr bool is_void_v = is_void<T>::value;
+
+/**************************************/
+
 //faire is_same mais pour listes
 
 /**************************************/
 
 //details
-template<std::size_t N, typename List,
+template<
+    std::size_t N, typename List,
     typename Enable = std::enable_if_t<(N < size_v<List>)>
-    >
+>
 struct at_impl;
 
 template<template<typename...> class L, typename T, typename... Ts>
@@ -170,6 +195,29 @@ inline constexpr bool empty_v = empty<L>::value;
 /**************************************/
 
 //details
+template<typename, typename>
+struct reverse_impl;
+
+template<template<typename> class L, typename... Ts, std::size_t... Is>
+struct reverse_impl<L<Ts...>, index_sequence<Is...>> {
+    using type = L<at_t<sizeof...(Ts) - 1 - Is, L<Ts...>>...>;
+};
+
+//public
+template<typename L>
+struct reverse {
+    using type = typename reverse_impl<
+        L,
+        make_index_sequence<size_v<L>>
+    >::type;
+};
+
+template<typename L>
+using reverse_t = typename reverse<L>::type;
+
+/**************************************/
+
+//details
 template<typename, typename, typename>
 struct contains_impl;
 
@@ -196,24 +244,24 @@ struct index_of_impl;
 
 template<typename T, template<typename...> class L, typename... Ts>
 struct index_of_impl<T, L<Ts...>, 0> {
+    static_assert(dependent_false_v<T> == false, "Typelist index out of bounds");
     static inline constexpr std::size_t value = ~static_cast<std::size_t>(0);
-    //DUDE TU MET UN STATIC_ASSERT OU DE QUOI
 };
 
 template<typename T, template<typename...> class L, typename... Ts, std::size_t Index>
 struct index_of_impl<T, L<Ts...>, Index> {
     static inline constexpr std::size_t value =
-        is_same_v<at_t<Index, L<Ts...>>, T> 
-            ? Index : index_of_impl<T, L<Ts...>, Index - 1>::value;
-
-    //il parait qu'il faut commencer a 0 -> size_v<liste> pour pogner 
-    //la première occurence, pas commencer du haut vers le bas...
+        is_same_v<at_t<Index, L<Ts...>>, T>
+            ? size_v<L<Ts...>> - (Index - 1)
+            : index_of_impl<T, L<Ts...>, (Index - 1)>::value;
 };
 
 //public
 template<typename T, typename L>
 struct index_of {
-    static inline constexpr std::size_t value = index_of_impl<T, L, size_v<L> - 1>::value;
+    using reversed = typename reverse_t<L>;
+    static inline constexpr std::size_t value =
+        index_of_impl<T, reversed, size_v<reversed> - 1>::value;
 };
 
 template<typename T, typename L>
@@ -335,8 +383,10 @@ using push_back_t = typename push_back<T, L>::type;
 template<template<typename> class, typename, typename>
 struct push_back_if_impl;
 
-template<template<typename> class Pred, typename T,
-    template<typename...> class L, typename... Ts>
+template<
+    template<typename> class Pred, typename T,
+    template<typename...> class L, typename... Ts
+>
 struct push_back_if_impl<Pred, T, L<Ts...>> {
     using type = std::conditional_t<Pred<T>::value, L<Ts..., T>, L<Ts...>>;
 };
@@ -429,24 +479,34 @@ using replace_t = typename replace<N, NewType, L>::type;
 
 /**************************************/
 
-template<template<typename> class, typename>
+//details
+template<template<typename> class, typename, typename>
 struct filter_impl;
 
-template<template<typename> class Pred, template<typename...> class L>
-struct filter_impl<Pred, L<>> {
-    using type = L<>;
+template<
+    template<typename> class Pred, typename Acc,
+    template<typename...> class L
+>
+struct filter_impl<Pred, Acc, L<>> {
+    using type = Acc;
 };
 
+template<
+    template<typename> class Pred, typename Acc,
+    template<typename...> class L, typename T, typename... Ts
+>
+struct filter_impl<Pred, Acc, L<T, Ts...>> {
+    using type = typename filter_impl<Pred, push_back_if_t<Pred, T, Acc>, L<Ts...>>::type;
+};
 
-template<template<typename> class Pred,
-    template<typename...> class L, typename T, typename... Ts>
-struct filter_impl<Pred, L<T, Ts...>> {
-    //using type = push_back_if<Pred, Ts, L<Ts...>>...;
+//public
+template<template<typename> class Pred, typename L, typename Acc = typelist<>>
+struct filter {
+    using type = typename filter_impl<Pred, Acc, L>::type;
+};
 
-    using type = typename filter_impl<Pred, push_back_if_t<Pred, T, L<Ts...>>>::type;
-}; //ici
-
-//faut utiliser push back if mais il est plus bas
+template<template<typename> class Pred, typename L, typename Acc = typelist<>>
+using filter_t = typename filter<Pred, L, Acc>::type;
 
 /**************************************/
 
@@ -467,29 +527,6 @@ struct transform {
 
 template<template<typename> class F, typename L>
 using transform_t = typename transform<F, L>::type;
-
-/**************************************/
-
-//details
-template<typename, typename>
-struct reverse_impl;
-
-template<template<typename> class L, typename... Ts, std::size_t... Is>
-struct reverse_impl<L<Ts...>, index_sequence<Is...>> {
-    using type = L<at_t<sizeof...(Ts) - 1 - Is, L<Ts...>>...>;
-};
-
-//public
-template<typename L>
-struct reverse {
-    using type = typename reverse_impl<
-        L,
-        make_index_sequence<size_v<L>>
-    >::type;
-};
-
-template<typename L>
-using reverse_t = typename reverse<L>::type;
 
 /**************************************/
 
@@ -539,6 +576,7 @@ struct erase_impl<T, L<Ts...>> {
 
 #ifdef EXOTIC_TYPELIST_DEBUG
 #include <iostream>
+#include <vector>
 int main() {
     using list = typelist<int, float, double, bool>;
 
@@ -564,14 +602,19 @@ int main() {
 
     using new_list_7 = pop_back_impl<new_list_6>::type;
 
-    using new_list_8 = replace_t<2, bool, new_list_7>;
+    using new_list_8 = push_back_t<bool, push_back_t<void, new_list_7>>;
+
+    using new_list_9 = replace_t<3, void, new_list_8>;
 
     std::cout << std::boolalpha << contains_v<int, new_list_8> << "\n";
 
-    std::cout << index_of_v<int, new_list_8> << "\n";
+    std::cout << index_of_v<int, new_list_9> << "\n";
+
+    using new_list_10 = filter_impl<is_void, typelist<>, new_list_9>::type;
 
     std::cout << typeid(new_list_4).name() << "\n";
-    std::cout << typeid(new_list_8).name() << "\n";
+    std::cout << typeid(new_list_9).name() << "\n";
+    std::cout << typeid(new_list_10).name() << "\n";
 }
 #endif
 
