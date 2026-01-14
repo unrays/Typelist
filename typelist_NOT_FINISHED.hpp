@@ -118,6 +118,10 @@ inline constexpr bool is_same_v = is_same<T, U>::type::value;
 
 /**************************************/
 
+//faire is_same mais pour listes
+
+/**************************************/
+
 //details
 template<std::size_t N, typename List,
     typename Enable = std::enable_if_t<(N < size_v<List>)>
@@ -285,6 +289,28 @@ using back_t = typename back<L>::type;
 
 /**************************************/
 
+//public
+template<typename L>
+struct first {
+    using type = typename front<L>::type;
+};
+
+template<typename L>
+using first_t = typename first<L>::type;
+
+/**************************************/
+
+//public
+template<typename L>
+struct last {
+    using type = typename back<L>::type;
+};
+
+template<typename L>
+using last_t = typename last<L>::type;
+
+/**************************************/
+
 //details
 template<typename, typename>
 struct push_back_impl;
@@ -302,6 +328,27 @@ struct push_back {
 
 template<typename T, typename L>
 using push_back_t = typename push_back<T, L>::type;
+
+/**************************************/
+
+//details
+template<template<typename> class, typename, typename>
+struct push_back_if_impl;
+
+template<template<typename> class Pred, typename T,
+    template<typename...> class L, typename... Ts>
+struct push_back_if_impl<Pred, T, L<Ts...>> {
+    using type = std::conditional_t<Pred<T>::value, L<Ts..., T>, L<Ts...>>;
+};
+
+//public
+template<template<typename> class Pred, typename T, typename L>
+struct push_back_if {
+    using type = typename push_back_if_impl<Pred, T, L>::type;
+};
+
+template<template<typename> class Pred, typename T, typename L>
+using push_back_if_t = typename push_back_if<Pred, T, L>::type;
 
 /**************************************/
 
@@ -382,6 +429,27 @@ using replace_t = typename replace<N, NewType, L>::type;
 
 /**************************************/
 
+template<template<typename> class, typename>
+struct filter_impl;
+
+template<template<typename> class Pred, template<typename...> class L>
+struct filter_impl<Pred, L<>> {
+    using type = L<>;
+};
+
+
+template<template<typename> class Pred,
+    template<typename...> class L, typename T, typename... Ts>
+struct filter_impl<Pred, L<T, Ts...>> {
+    //using type = push_back_if<Pred, Ts, L<Ts...>>...;
+
+    using type = typename filter_impl<Pred, push_back_if_t<Pred, T, L<Ts...>>>::type;
+}; //ici
+
+//faut utiliser push back if mais il est plus bas
+
+/**************************************/
+
 //details
 template<template<typename> class, typename>
 struct transform_impl;
@@ -442,6 +510,20 @@ struct pop_back {
 
 template<typename L>
 using pop_back_t = typename pop_back<L>::type;
+
+/**************************************/
+
+//details
+template<typename, typename>
+struct erase_impl;
+
+template<typename T, template<typename...> class L, typename... Ts>
+struct erase_impl<T, L<Ts...>> {
+    //using type = L<
+    //    std::conditional_t
+
+    //>
+};
 
 /**************************************/
 
