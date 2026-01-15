@@ -139,11 +139,13 @@ See [LICENSE](https://www.boost.org/LICENSE_1_0.txt) for details.
 
 ## Author
 
-I had zero experience before starting this. I built **Lyst** in just 5 intense days. This library is the result of everything I learned in that time.
-
 **Félix-Olivier Dumas**
 GitHub: [unrays/Lyst](https://github.com/unrays/Lyst)
 Version: 1.0.0
 Last Updated: January 15, 2026
+
+I had zero experience before starting this. I built **Lyst** in just 5 intense days. This library is the result of everything I learned in that time.
+
+
 
 
