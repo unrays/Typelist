@@ -20,7 +20,7 @@
  * For more information, visit: https://github.com/unrays/Typelist
  *
  * Author: Félix-Olivier Dumas
- * Version: 0.8.0
+ * Version: 0.9.0
  * Last Updated: January 14, 2026
  *********************************************************************/
 
@@ -38,6 +38,11 @@ template<typename... Ts>
 struct typelist {
     using types = typelist<Ts...>;
 };
+
+/**************************************/
+
+//public
+struct null_type {};
 
 /**************************************/
 
@@ -140,9 +145,60 @@ struct is_void : is_same<T, void>::type {};
 template<typename T>
 inline constexpr bool is_void_v = is_void<T>::value;
 
+template<typename T>
+struct is_not_void {
+    inline static constexpr bool value = !is_void<T>::value;
+};
+
+template<typename T>
+inline constexpr bool is_not_void_v = is_not_void<T>::value;
+
+/**************************************/
+
+//public (external)
+template<typename T>
+struct is_null_type : is_same<T, null_type>::type {};
+
+template<typename T>
+inline constexpr bool is_null_type_v = is_null_type<T>::value;
+
+template<typename T>
+struct is_not_null_type {
+    inline static constexpr bool value = !is_null_type<T>::value;
+};
+
+template<typename T>
+inline constexpr bool is_not_null_type_v = is_not_null_type<T>::value;
+
+/**************************************/
+
+//PEUT ETRE FAIRE UNE MACRO
+
+//is integral, is ptr, is ref etc...
+
 /**************************************/
 
 //faire is_same mais pour listes
+
+/**************************************/
+
+//details
+template<typename>
+struct clear_impl;
+
+template<template<typename...> class L, typename... Ts>
+struct clear_impl<L<Ts...>> {
+    using type = L<>;
+};
+
+//public
+template<typename L>
+struct clear {
+    using type = typename clear_impl<L>::type;
+};
+
+template<typename L>
+using clear_t = typename clear<L>::type;
 
 /**************************************/
 
@@ -240,6 +296,35 @@ inline constexpr bool contains_v = contains<T, L>::value;
 
 //details
 template<typename, typename, std::size_t>
+struct count_impl;
+
+template<typename U, template<typename...> class L, std::size_t It>
+struct count_impl<U, L<>, It> {
+    inline static constexpr std::size_t value = It;
+};
+
+template<
+    typename U,
+    template<typename...> class L, typename T, typename... Ts,
+    std::size_t It>
+struct count_impl<U, L<T, Ts...>, It> {
+    inline static constexpr std::size_t value =
+        count_impl<U, L<Ts...>, (is_same_v<T, U> ? It + 1 : It)>::value;
+};
+
+//public
+template<typename U, typename L>
+struct count {
+    inline static constexpr std::size_t value = count_impl<U, L, 0>::value;
+};
+
+template<typename U, typename L>
+inline constexpr std::size_t count_v = count<U, L>::value;
+
+/**************************************/
+
+//details
+template<typename, typename, std::size_t>
 struct index_of_impl;
 
 template<typename T, template<typename...> class L, typename... Ts>
@@ -252,7 +337,7 @@ template<typename T, template<typename...> class L, typename... Ts, std::size_t 
 struct index_of_impl<T, L<Ts...>, Index> {
     static inline constexpr std::size_t value =
         is_same_v<at_t<Index, L<Ts...>>, T>
-            ? size_v<L<Ts...>> - (Index - 1)
+            ? (size_v<L<Ts...>> - 1) - Index
             : index_of_impl<T, L<Ts...>, (Index - 1)>::value;
 };
 
@@ -440,6 +525,8 @@ struct concat {
 template<typename L1, typename L2>
 using concat_t = typename concat<L1, L2>::type;
 
+//FAIRE CONCAT VARIADIC
+
 /**************************************/
 
 //details
@@ -552,15 +639,25 @@ using pop_back_t = typename pop_back<L>::type;
 
 //details
 template<typename, typename>
-struct erase_impl;
+struct remove_all_impl;
 
 template<typename T, template<typename...> class L, typename... Ts>
-struct erase_impl<T, L<Ts...>> {
-    //using type = L<
-    //    std::conditional_t
-
-    //>
+struct remove_all_impl<T, L<Ts...>> { //prob utiliser recursion pour early exit
+    using type =
+        filter_t<
+            is_not_null_type, 
+            typelist<std::conditional_t<is_same_v<Ts, T>, null_type, Ts>...>
+        >;
 };
+
+//public
+template<typename T, typename L>
+struct remove_all {
+    using type = typename remove_all_impl<T, L>::type;
+};
+
+template<typename T, typename L>
+using remove_all_t = typename remove_all<T, L>::type;
 
 /**************************************/
 
@@ -576,7 +673,6 @@ struct erase_impl<T, L<Ts...>> {
 
 #ifdef EXOTIC_TYPELIST_DEBUG
 #include <iostream>
-#include <vector>
 int main() {
     using list = typelist<int, float, double, bool>;
 
@@ -604,17 +700,23 @@ int main() {
 
     using new_list_8 = push_back_t<bool, push_back_t<void, new_list_7>>;
 
-    using new_list_9 = replace_t<3, void, new_list_8>;
+    using new_list_9 = replace_t<2, void, new_list_8>;
 
     std::cout << std::boolalpha << contains_v<int, new_list_8> << "\n";
 
     std::cout << index_of_v<int, new_list_9> << "\n";
 
-    using new_list_10 = filter_impl<is_void, typelist<>, new_list_9>::type;
+    using new_list_10 = filter_impl<is_not_void, typelist<>, new_list_9>::type;
+
+    using new_list_11 = remove_all_t<int, new_list_10>;
+
+    using new_list_12 = push_back_t<float, new_list_11>;
 
     std::cout << typeid(new_list_4).name() << "\n";
     std::cout << typeid(new_list_9).name() << "\n";
-    std::cout << typeid(new_list_10).name() << "\n";
+    std::cout << typeid(new_list_12).name() << "\n";
+
+    std::cout << count_v<float, new_list_12> << "\n";
 }
 #endif
 
