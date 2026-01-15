@@ -144,8 +144,7 @@ GitHub: [unrays/Lyst](https://github.com/unrays/Lyst)
 Version: 1.0.0
 Last Updated: January 15, 2026
 
-I had zero experience before this. I built **Lyst** in 5 intense days and proud of the work.
-
+I had zero experience with typelists before this. I built **Lyst** in 5 intense days and am proud of the work.
 
 
 
