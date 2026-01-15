@@ -2,7 +2,8 @@
 
 # EXOTIC.lyst
 
-**EXOTIC.lyst** is a high-performance, header-only C++ library for managing and manipulating typelists. Part of the EXOTIC collection of modern C++ libraries, it provides a full suite of compile-time type operations optimized for template metaprogramming (TMP).
+**EXOTIC.lyst** is a high-performance, header-only C++ library for managing and manipulating typelists.
+Part of the **EXOTIC** collection of modern C++ libraries, it provides a full suite of compile-time type operations optimized for template metaprogramming (TMP).
 
 ---
 
@@ -25,26 +26,26 @@
 * Fully header-only C++ library, no dependencies outside the standard library.
 * Compile-time typelist operations:
 
-  * Access elements (`at`, `front`, `back`)
-  * Modification (`push_front`, `push_back`, `replace`, `pop_front`, `pop_back`)
+  * Access elements: `at`, `front`, `back`
+  * Modification: `push_front`, `push_back`, `replace`, `pop_front`, `pop_back`
   * Filtering and transformation of types
   * Concatenation of typelists
-  * Counting and searching types (`count`, `index_of`, `contains`)
+  * Counting and searching types: `count`, `index_of`, `contains`
 * Advanced TMP helpers and type traits in `EXOTIC::Utility`
-* Zero runtime overhead: all operations are resolved at compile time.
-* Compatible with modern C++ standards (C++17 and later recommended).
+* Zero runtime overhead: all operations are resolved at compile time
+* Compatible with modern C++ standards (C++17 and later recommended)
 
 ---
 
 ## Installation
 
-Simply include the header in your project:
+Include the header in your project:
 
 ```cpp
 #include "EXOTIC.lyst.h"
 ```
 
-No compilation or linking steps are required, as it is a header-only library.
+No compilation or linking steps are required, as this is a header-only library.
 
 ---
 
@@ -67,9 +68,9 @@ static_assert(!EXOTIC::Lyst::empty_v<MyTypes>, "Typelist should not be empty");
 Access elements:
 
 ```cpp
-using FirstType = EXOTIC::Lyst::front_t<MyTypes>; // int
-using LastType  = EXOTIC::Lyst::back_t<MyTypes>;  // double
-using SecondType = EXOTIC::Lyst::at_t<1, MyTypes>; // float
+using FirstType  = EXOTIC::Lyst::front_t<MyTypes>;  // int
+using LastType   = EXOTIC::Lyst::back_t<MyTypes>;   // double
+using SecondType = EXOTIC::Lyst::at_t<1, MyTypes>;  // float
 ```
 
 ---
@@ -99,7 +100,7 @@ struct add_pointer { using type = T*; };
 using PointerTypes = EXOTIC::Lyst::transform_t<add_pointer, MyTypes>; // int*, float*, double*
 ```
 
-Other operations include:
+Other available operations:
 
 * `concat_t<L1, L2>` – concatenate two typelists
 * `remove_first_t<T, L>` – remove the first occurrence of a type
@@ -118,7 +119,7 @@ Other operations include:
 * `size_v<L>` – get typelist size
 * `is_same_v<T, U>` – check if two types are the same
 * `is_void_v<T>` / `is_not_void_v<T>` – check for void types
-* `dependent_false_v<T>` – helper for static_asserts in templates
+* `dependent_false_v<T>` – helper for `static_assert` in templates
 
 These utilities enable safer, more readable TMP code.
 
