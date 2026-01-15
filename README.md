@@ -144,7 +144,7 @@ GitHub: [unrays/Lyst](https://github.com/unrays/Lyst)
 Version: 1.0.0
 Last Updated: January 15, 2026
 
-I had zero experience before starting this. I built **Lyst** in just 5 intense days. This library is the result of everything I learned in that time.
+I had zero experience before this. I built **Lyst** in 5 intense days and proud of the work.
 
 
 
