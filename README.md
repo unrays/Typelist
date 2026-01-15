@@ -2,6 +2,11 @@
 
 # EXOTIC.lyst
 
+[![Build](https://img.shields.io/badge/build-passing-brightgreen)](#)
+[![License](https://img.shields.io/badge/license-BSL%201.0-blue)](#)
+[![C++ Version](https://img.shields.io/badge/C%2B%2B-17-blue)](#)
+[![Release](https://img.shields.io/badge/release-1.0.0-blueviolet)](#)
+
 **EXOTIC.lyst** is a high-performance, header-only C++ library for managing and manipulating typelists.
 Part of the **EXOTIC** collection of modern C++ libraries, it provides a full suite of compile-time type operations optimized for template metaprogramming (TMP).
 
