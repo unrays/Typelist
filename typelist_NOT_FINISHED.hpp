@@ -20,8 +20,8 @@
  * For more information, visit: https://github.com/unrays/Typelist
  *
  * Author: Félix-Olivier Dumas
- * Version: 0.9.0
- * Last Updated: January 14, 2026
+ * Version: 0.9.5
+ * Last Updated: January 15, 2026
  *********************************************************************/
 
 #ifndef EXOTIC_TYPELIST_H
@@ -176,9 +176,6 @@ inline constexpr bool is_not_null_type_v = is_not_null_type<T>::value;
 
 //is integral, is ptr, is ref etc...
 
-/**************************************/
-
-//faire is_same mais pour listes
 
 /**************************************/
 
@@ -263,8 +260,7 @@ struct reverse_impl<L<Ts...>, index_sequence<Is...>> {
 template<typename L>
 struct reverse {
     using type = typename reverse_impl<
-        L,
-        make_index_sequence<size_v<L>>
+        L, make_index_sequence<size_v<L>>
     >::type;
 };
 
@@ -525,8 +521,6 @@ struct concat {
 template<typename L1, typename L2>
 using concat_t = typename concat<L1, L2>::type;
 
-//FAIRE CONCAT VARIADIC
-
 /**************************************/
 
 //details
@@ -543,9 +537,7 @@ template<
 struct replace_impl<N, NewType, L<Ts...>, index_sequence<Is...>> {
     using type = L<
         std::conditional_t<
-            Is == N,
-            NewType,
-            at_t<Is, L<Ts...>>
+            Is == N, NewType, at_t<Is, L<Ts...>>
         >...
     >;
 };
@@ -554,10 +546,7 @@ struct replace_impl<N, NewType, L<Ts...>, index_sequence<Is...>> {
 template<std::size_t N, typename NewType, typename L>
 struct replace {
     using type = typename replace_impl<
-        N,
-        NewType,
-        L,
-        make_index_sequence<size_v<L>>
+        N, NewType, L, make_index_sequence<size_v<L>>
     >::type;
 };
 
@@ -637,17 +626,41 @@ using pop_back_t = typename pop_back<L>::type;
 
 /**************************************/
 
+//public
+template<typename, typename>
+struct remove_first_impl;
+
+template<
+    typename U,
+    template<typename...> class L, typename T, typename... Ts
+>
+struct remove_first_impl<U, L<T, Ts...>> {
+    using type = filter_t<
+        is_not_null_type, replace_t<index_of_v<U, L<T, Ts...>>, null_type, L<T, Ts...>>
+    >;
+};
+
+//public
+template<typename U, typename L>
+struct remove_first {
+    using type = typename remove_first_impl<U, L>::type;
+};
+
+template<typename U, typename L>
+using remove_first_t = typename remove_first<U, L>::type;
+
+/**************************************/
+
 //details
 template<typename, typename>
 struct remove_all_impl;
 
 template<typename T, template<typename...> class L, typename... Ts>
 struct remove_all_impl<T, L<Ts...>> { //prob utiliser recursion pour early exit
-    using type =
-        filter_t<
-            is_not_null_type, 
-            typelist<std::conditional_t<is_same_v<Ts, T>, null_type, Ts>...>
-        >;
+    using type = filter_t<
+        is_not_null_type, 
+        typelist<std::conditional_t<is_same_v<Ts, T>, null_type, Ts>...>
+    >;
 };
 
 //public
@@ -715,6 +728,10 @@ int main() {
     std::cout << typeid(new_list_4).name() << "\n";
     std::cout << typeid(new_list_9).name() << "\n";
     std::cout << typeid(new_list_12).name() << "\n";
+
+    using new_list_13 = remove_first_t<bool, new_list_12>;
+
+    std::cout << typeid(new_list_13).name() << "\n";
 
     std::cout << count_v<float, new_list_12> << "\n";
 }
