@@ -39,7 +39,7 @@ Part of the **EXOTIC** collection of modern C++ libraries, it provides a full su
 
 ## Installation
 
-Include the header in your project:
+Simply include the header in your project:
 
 ```cpp
 #include "EXOTIC.lyst.h"
