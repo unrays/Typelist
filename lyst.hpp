@@ -24,8 +24,8 @@
  * Last Updated: January 15, 2026
  *********************************************************************/
 
-#ifndef EXOTIC_LYST_H
-#define EXOTIC_LYST_H
+#ifndef EXOTIC_LYST_HPP
+#define EXOTIC_LYST_HPP
 
 #include <cstddef>
 
@@ -599,4 +599,4 @@ using remove_all_t = typename remove_all<T, L>::type;
 } // namespace EXOTIC::Lyst
 } // namespace EXOTIC
 
-#endif // EXOTIC_LYST_H
+#endif // EXOTIC_LYST_HPP
