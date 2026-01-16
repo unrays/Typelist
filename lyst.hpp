@@ -232,7 +232,7 @@ namespace details {
 	struct index_of_impl;
 
 	template<typename T, template<typename...> class L, typename... Ts>
-	struct index_of_impl<T, L<Ts...>, 0> {
+	struct index_of_impl<T, L<Ts...>, -1> {
 		static_assert(Utility::dependent_false_v<T> == false, "Typelist index out of bounds");
 		inline static constexpr std::size_t value = ~static_cast<std::size_t>(0);
 	};
@@ -241,7 +241,7 @@ namespace details {
 	struct index_of_impl<T, L<Ts...>, Index> {
 		static inline constexpr std::size_t value =
 			Utility::is_same_v<typename at<Index, L<Ts...>>::type, T>
-				? (Utility::size_v<L<Ts...>> -1) - Index
+				? (Utility::size_v<L<Ts...>> - 1) - Index
 				: index_of_impl<T, L<Ts...>, (Index - 1)>::value;
 	};
 
