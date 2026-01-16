@@ -37,8 +37,8 @@ namespace EXOTIC {
 
 namespace Utility {
 
-struct true_type { static inline constexpr bool value = true; };
-struct false_type { static inline constexpr bool value = false; };
+struct true_type { inline static constexpr bool value = true; };
+struct false_type { inline static constexpr bool value = false; };
 
 template<class> struct dependent_false;
 template<typename L> struct size;
@@ -53,7 +53,7 @@ namespace details {
 
 	template<template<typename...> class L, typename... Ts>
 	struct size_impl<L<Ts...>> {
-		static inline constexpr std::size_t value = sizeof...(Ts);
+		inline static constexpr std::size_t value = sizeof...(Ts);
 	};
 
 	template<std::size_t...>
@@ -87,7 +87,7 @@ inline constexpr bool dependent_false_v = dependent_false<T>::value;
 
 template<typename L>
 struct size {
-	static inline constexpr std::size_t value = details::size_impl<L>::value;
+	inline static constexpr std::size_t value = details::size_impl<L>::value;
 };
 
 template<typename L>
@@ -190,7 +190,7 @@ namespace details {
 
 	template<template<typename...> class L, typename... Ts>
 	struct empty_impl<L<Ts...>> {
-		static inline constexpr bool value = sizeof...(Ts) == 0;
+		inline static constexpr bool value = sizeof...(Ts) == 0;
 	};
 
 	template<typename, typename>
@@ -234,7 +234,7 @@ namespace details {
 	template<typename T, template<typename...> class L, typename... Ts>
 	struct index_of_impl<T, L<Ts...>, 0> {
 		static_assert(Utility::dependent_false_v<T> == false, "Typelist index out of bounds");
-		static inline constexpr std::size_t value = ~static_cast<std::size_t>(0);
+		inline static constexpr std::size_t value = ~static_cast<std::size_t>(0);
 	};
 
 	template<typename T, template<typename...> class L, typename... Ts, std::size_t Index>
@@ -431,7 +431,7 @@ using at_t = typename at<N, L>::type;
 
 template<typename L>
 struct empty {
-	static inline constexpr bool value = details::empty_impl<L>::value;
+	inline static constexpr bool value = details::empty_impl<L>::value;
 };
 
 template<typename L>
@@ -449,7 +449,7 @@ using reverse_t = typename reverse<L>::type;
 
 template<typename T, typename L>
 struct contains {
-	static inline constexpr bool value =
+	inline static constexpr bool value =
 		details::contains_impl<T, L, Utility::make_index_sequence<Utility::size_v<L>>>::value;
 };
 
@@ -467,7 +467,7 @@ inline constexpr std::size_t count_v = count<U, L>::value;
 template<typename T, typename L>
 struct index_of {
 	using reversed = typename reverse_t<L>;
-	static inline constexpr std::size_t value =
+	inline static constexpr std::size_t value =
 		details::index_of_impl<T, reversed, Utility::size_v<reversed> -1>::value;
 };
 
