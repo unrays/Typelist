@@ -241,8 +241,8 @@ namespace details {
 	struct index_of_impl<T, L<Ts...>, Index> {
 		static inline constexpr std::size_t value =
 			Utility::is_same_v<typename at<Index, L<Ts...>>::type, T>
-			? (Utility::size_v<L<Ts...>> -1) - Index
-			: index_of_impl<T, L<Ts...>, (Index - 1)>::value;
+				? (Utility::size_v<L<Ts...>> -1) - Index
+				: index_of_impl<T, L<Ts...>, (Index - 1)>::value;
 	};
 
 	template<typename>
@@ -309,7 +309,8 @@ namespace details {
 		using type = L<Ts1..., Ts2...>;
 	};
 
-	template<std::size_t N, typename NewType, typename List, typename Seq,
+	template<
+		std::size_t N, typename NewType, typename List, typename Seq,
 		typename Enable = std::enable_if_t<(N < Utility::size_v<List>)>
 	>
 	struct replace_impl;
