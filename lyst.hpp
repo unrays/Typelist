@@ -1,5 +1,5 @@
 /*********************************************************************
- * EXOTIC.lyst - {Short Description of the Library}
+ * EXOTIC.lyst - Header-only C++ typelist library
  *
  * Copyright (c) 2026 Félix-Olivier Dumas
  * All rights reserved.
@@ -9,7 +9,10 @@
  *     https://www.boost.org/LICENSE_1_0.txt
  *
  * Description:
- *     {Detailed description of the library's purpose and functionality}
+ *     Provides a high-performance, header-only typelist implementation
+ *     with common operations like push, pop, concat, reverse, filter,
+ *     and transform. Useful for template metaprogramming and compile-time
+ *     type manipulation.
  *
  * This file is part of the EXOTIC collection, a set of high-performance
  * C++ libraries designed for modern software development.
@@ -17,14 +20,12 @@
  * For more information, visit: https://github.com/unrays/Lyst
  *
  * Author: Félix-Olivier Dumas
- * Version: 1.0.0
+ * Version: 1.0.1
  * Last Updated: January 15, 2026
  *********************************************************************/
 
 #ifndef EXOTIC_LYST_H
 #define EXOTIC_LYST_H
-
-#define EXOTIC_LYST_DEBUG
 
 #include <cstddef>
 
@@ -35,6 +36,16 @@ namespace EXOTIC {
 // ============================================================
 
 namespace Utility {
+
+struct true_type { static inline constexpr bool value = true; };
+struct false_type { static inline constexpr bool value = false; };
+
+template<class> struct dependent_false;
+template<typename L> struct size;
+template<std::size_t... Is> struct index_sequence;
+template<typename T, typename U> struct is_same;
+template<typename T> struct is_void;
+template<typename T> struct is_not_void;
 
 namespace details {
 	template<typename>
@@ -67,12 +78,6 @@ namespace details {
 	template<typename T>
 	struct is_same_impl<T, T> : true_type {};
 } // namespace EXOTIC::Utility::details
-
-struct true_type {
-	static inline constexpr bool value = true;
-};
-
-struct false_type { static inline constexpr bool value = false; };
 
 template<class>
 struct dependent_false : false_type {};
@@ -118,12 +123,42 @@ inline constexpr bool is_not_void_v = is_not_void<T>::value;
 
 } // namespace EXOTIC::Utility
 
-
 // ============================================================
 // EXOTIC::Lyst - typelist and operations
 // ============================================================
 
 namespace Lyst {
+
+struct null_type;
+
+template<typename... Ts>
+struct typelist;
+
+template<typename T> struct is_null_type;
+template<typename T> struct is_not_null_type;
+
+template<typename L> struct clear;
+template<std::size_t N, typename L> struct at;
+template<typename L> struct empty;
+template<typename L> struct reverse;
+template<typename T, typename L> struct contains;
+template<typename U, typename L> struct count;
+template<typename T, typename L> struct index_of;
+template<typename L> struct pop_front;
+template<typename L> struct front;
+template<typename L> struct back;
+template<typename L> struct first;
+template<typename L> struct last;
+template<typename T, typename L> struct push_back;
+template<template<typename> class Pred, typename T, typename L> struct push_back_if;
+template<typename T, typename L> struct push_front;
+template<typename L1, typename L2> struct concat;
+template<std::size_t N, typename NewType, typename L> struct replace;
+template<template<typename> class Pred, typename L, typename Acc> struct filter;
+template<template<typename> class F, typename L> struct transform;
+template<typename L> struct pop_back;
+template<typename U, typename L> struct remove_first;
+template<typename T, typename L> struct remove_all;
 
 namespace details {
 	template<typename>
@@ -163,7 +198,7 @@ namespace details {
 
 	template<template<typename> class L, typename... Ts, std::size_t... Is>
 	struct reverse_impl<L<Ts...>, Utility::index_sequence<Is...>> {
-		using type = L<at_t<sizeof...(Ts) - 1 - Is, L<Ts...>>...>;
+		using type = L<typename at<sizeof...(Ts) - 1 - Is, L<Ts...>>::type...>;
 	};
 
 	template<typename, typename, typename>
@@ -171,7 +206,8 @@ namespace details {
 
 	template<typename T, template<typename...> class L, typename... Ts, std::size_t... Is>
 	struct contains_impl<T, L<Ts...>, Utility::index_sequence<Is...>> {
-		static inline constexpr bool value = (Utility::is_same_v<at_t<Is, L<Ts...>>, T> || ...);
+		static inline constexpr bool value =
+			(Utility::is_same_v<typename at<Is, L<Ts...>>::type, T> || ...);
 	};
 
 	template<typename, typename, std::size_t>
@@ -204,9 +240,9 @@ namespace details {
 	template<typename T, template<typename...> class L, typename... Ts, std::size_t Index>
 	struct index_of_impl<T, L<Ts...>, Index> {
 		static inline constexpr std::size_t value =
-			Utility::is_same_v<at_t<Index, L<Ts...>>, T>
-				? (Utility::size_v<L<Ts...>> -1) - Index
-				: index_of_impl<T, L<Ts...>, (Index - 1)>::value;
+			Utility::is_same_v<typename at<Index, L<Ts...>>::type, T>
+			? (Utility::size_v<L<Ts...>> -1) - Index
+			: index_of_impl<T, L<Ts...>, (Index - 1)>::value;
 	};
 
 	template<typename>
@@ -235,7 +271,7 @@ namespace details {
 
 	template<template<typename...> class L, typename... Ts>
 	struct back_impl<L<Ts...>> {
-		using type = at_t<Utility::size_v<L<Ts...>> -1, L<Ts...>>;
+		using type = typename at<Utility::size_v<L<Ts...>> -1, L<Ts...>>::type;
 	};
 
 	template<typename, typename>
@@ -285,7 +321,7 @@ namespace details {
 	>
 	struct replace_impl<N, NewType, L<Ts...>, Utility::index_sequence<Is...>> {
 		using type = L<
-			std::conditional_t<Is == N, NewType, at_t<Is, L<Ts...>>>...
+			std::conditional_t<Is == N, NewType, typename at<Is, L<Ts...>>::type>...
 		>;
 	};
 
@@ -305,7 +341,9 @@ namespace details {
 		template<typename...> class L, typename T, typename... Ts
 	>
 	struct filter_impl<Pred, Acc, L<T, Ts...>> {
-		using type = typename filter_impl<Pred, push_back_if_t<Pred, T, Acc>, L<Ts...>>::type;
+		using type = typename filter_impl<
+			Pred, typename push_back_if<Pred, T, Acc>::type, L<Ts...>
+		>::type;
 	};
 
 	template<template<typename> class, typename>
@@ -321,7 +359,9 @@ namespace details {
 
 	template<template<typename...> class L, typename... Ts>
 	struct pop_back_impl<L<Ts...>> {
-		using type = reverse_t<pop_front_t<reverse_t<L<Ts...>>>>;
+		using type = typename reverse<
+			typename pop_front<typename reverse<L<Ts...>>::type>::type
+		>::type;
 	};
 
 	template<typename, typename>
@@ -332,9 +372,11 @@ namespace details {
 		template<typename...> class L, typename T, typename... Ts
 	>
 	struct remove_first_impl<U, L<T, Ts...>> {
-		using type = filter_t<
-			is_not_null_type, replace_t<index_of_v<U, L<T, Ts...>>, null_type, L<T, Ts...>>
-		>;
+		using type = typename filter<
+			is_not_null_type,
+			typename replace<index_of<U, L<T, Ts...>>::value, null_type, L<T, Ts...>>::type,
+			typelist<>
+		>::type;
 	};
 
 	template<typename, typename>
@@ -342,10 +384,11 @@ namespace details {
 
 	template<typename T, template<typename...> class L, typename... Ts>
 	struct remove_all_impl<T, L<Ts...>> {
-		using type = filter_t<
+		using type = typename filter<
 			is_not_null_type,
-			typelist<std::conditional_t<Utility::is_same_v<Ts, T>, null_type, Ts>...>
-		>;
+			typelist<std::conditional_t<Utility::is_same_v<Ts, T>, null_type, Ts>...>,
+			typelist<>
+		>::type;
 	};
 } // namespace EXOTIC::Lyst::details
 
@@ -433,7 +476,7 @@ inline constexpr std::size_t index_of_v = index_of<T, L>::value;
 
 template<typename L>
 struct pop_front {
-	using type = typename pop_front_impl<L>::type;
+	using type = typename details::pop_front_impl<L>::type;
 };
 
 template<typename L>
@@ -441,7 +484,7 @@ using pop_front_t = typename pop_front<L>::type;
 
 template<typename L>
 struct front {
-	using type = typename front_impl<L>::type;
+	using type = typename details::front_impl<L>::type;
 };
 
 template<typename L>
